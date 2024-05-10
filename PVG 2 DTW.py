@@ -100,7 +100,7 @@ def get_departure_flight_detail(web_driver, departure_css):
             print('non stop and lay over not found')
 
 
-def get_return_flight_details():
+def get_return_flight_details(i):
     for flight in FLIGHT_LIST:
         flight_info_element = driver.find_element(By.ID, flight)
         flight_numbers = flight_info_element.find_elements(By.CLASS_NAME, 'flight-number')
@@ -141,7 +141,7 @@ def get_return_flight_details():
                 price_info = price_info + _.text
             print(price_info)
         print('***************************************************************')
-    print('This is a new search ##################')
+    print(f'This is the {i} search ##################')
 
 
 def select_premium_economy(flight_info_id):
@@ -155,7 +155,7 @@ def select_premium_economy(flight_info_id):
         time.sleep(30)
     except NoSuchElementException:
         print('no premium economy offering found')
-        return
+        return None
 
     select_flight_button = driver.find_element(By.CLASS_NAME, "flight-specific_amenities__details-button")
     select_flight_button.click()
@@ -167,6 +167,7 @@ def select_premium_economy(flight_info_id):
     continue_button_element = WebDriverWait(driver, SLEEP_TIME). \
         until(EC.presence_of_element_located((By.XPATH, continue_button_xpath)))
     continue_button_element.click()
+    return True
 
 
 driver = webdriver.Chrome()
@@ -236,18 +237,24 @@ output_file = 'flight_details.txt'
 if os.path.exists(output_file):
     os.remove(output_file)
 original_stdout = sys.stdout
+count = 0
 for air_flight in FLIGHT_LIST:
     with open(output_file, 'a', encoding='utf-8') as f:
         sys.stdout = f
         print(f'departure date: {departure_date}')
         get_departure_flight_detail(driver, f'#{air_flight} .flight-results-grid__flight-card')
-    select_premium_economy(air_flight)
-    time.sleep(10)
-    with open(output_file, 'a', encoding='utf-8') as f:
-        sys.stdout = f
-        print(f'return date:  {return_date}')
-        # sys.stdout = original_stdout
-        get_return_flight_details()
+    sys.stdout = original_stdout
+    if select_premium_economy(air_flight):
+        time.sleep(10)
+        with open(output_file, 'a', encoding='utf-8') as f:
+            sys.stdout = f
+            print(f'return date:  {return_date}')
+            # sys.stdout = original_stdout
+            get_return_flight_details(count)
+            count += 1
+    else:
+         # print('premium economy class not offered')
+        pass
 
     driver.execute_script("window.open('{}', '_blank');".format(current_url))
     driver.close()
